@@ -17,6 +17,7 @@ import * as nextEpisodeScheduleController from "./src/controllers/nextEpisodeSch
 import { routeTypes } from "./src/routes/category.route.js";
 
 import { getWatchlist } from "./src/controllers/watchlist.controller.js";
+import { getVoiceActors } from "./src/controllers/voiceactor.controller.js";
 
 
 import { getCharacter } from "./src/controllers/characters.controller.js";
