@@ -4,14 +4,15 @@ import extractPage from "../helper/extractPages.helper.js";
 import extractTopTen from "../extractors/topten.extractor.js";
 import { routeTypes } from "../routes/category.route.js";
 import extractSchedule from "../extractors/schedule.extractor.js";
-// import { getCachedData, setCachedData } from "../helper/cache.helper.js";
 
 const genres = routeTypes
   .slice(0, 41)
   .map((genre) => genre.replace("genre/", ""));
 
-export const getHomeInfo = async (req, res) => {
+export const getHomeInfo = async (request) => {
   try {
+    const today = new Date().toISOString().split("T")[0];
+
     const [
       spotlights,
       trending,
@@ -28,7 +29,7 @@ export const getHomeInfo = async (req, res) => {
       getSpotlights(),
       getTrending(),
       extractTopTen(),
-      extractSchedule(new Date().toISOString().split("T")[0]),
+      extractSchedule(today),
       extractPage(1, "top-airing"),
       extractPage(1, "most-popular"),
       extractPage(1, "most-favorite"),
@@ -38,22 +39,39 @@ export const getHomeInfo = async (req, res) => {
       extractPage(1, "recently-added"),
     ]);
 
-    return {
-      spotlights,
-      trending,
-      topTen,
-      today: { schedule },
-      topAiring: topAiring[0],
-      mostPopular: mostPopular[0],
-      mostFavorite: mostFavorite[0],
-      latestCompleted: latestCompleted[0],
-      latestEpisode: latestEpisode[0],
-      topUpcoming: topUpcoming[0],
-      recentlyAdded: recentlyAdded[0],
-      genres,
-    };
+    return new Response(
+      JSON.stringify({
+        success: true,
+        spotlights,
+        trending,
+        topTen,
+        today: { schedule },
+        topAiring: topAiring?.[0] || [],
+        mostPopular: mostPopular?.[0] || [],
+        mostFavorite: mostFavorite?.[0] || [],
+        latestCompleted: latestCompleted?.[0] || [],
+        latestEpisode: latestEpisode?.[0] || [],
+        topUpcoming: topUpcoming?.[0] || [],
+        recentlyAdded: recentlyAdded?.[0] || [],
+        genres,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Error fetching home info:", error);
-    throw new Error("Failed to fetch home info");
+
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: "Failed to fetch home info",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 };
