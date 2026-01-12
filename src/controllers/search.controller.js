@@ -6,95 +6,78 @@ export const search = async (request) => {
     const url = new URL(request.url);
     const sp = url.searchParams;
 
-    let keyword = sp.get("q") || sp.get("keyword");
-    const type = sp.get("type");
-    const status = sp.get("status");
-    const rated = sp.get("rated");
-    const score = sp.get("score");
-    const season = sp.get("season");
-    const language = sp.get("language");
-    const genres = sp.get("genres");
-    const sort = sp.get("sort");
+    // original keyword
+    const rawKeyword = sp.get("q") || sp.get("keyword");
 
-    const sy = sp.get("sy");
-    const sm = sp.get("sm");
-    const sd = sp.get("sd");
-    const ey = sp.get("ey");
-    const em = sp.get("em");
-    const ed = sp.get("ed");
+    if (!rawKeyword) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "keyword or q query parameter is required",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // try converting foreign language
+    let keyword = rawKeyword;
+    try {
+      const converted = await convertForeignLanguage(rawKeyword);
+      if (converted && converted.trim().length > 0) {
+        keyword = converted;
+      }
+    } catch {
+      // fallback to raw keyword
+      keyword = rawKeyword;
+    }
 
     const page = parseInt(sp.get("page") || "1", 10);
 
-    // foreign language safe convert
-    if (keyword) {
-      keyword = await convertForeignLanguage(keyword);
-    }
-
-    // 🔹 CALL EXTRACTOR (DON'T ASSUME SHAPE)
     const result = await extractSearchResults({
       keyword,
-      type,
-      status,
-      rated,
-      score,
-      season,
-      language,
-      genres,
-      sort,
+      type: sp.get("type"),
+      status: sp.get("status"),
+      rated: sp.get("rated"),
+      score: sp.get("score"),
+      season: sp.get("season"),
+      language: sp.get("language"),
+      genres: sp.get("genres"),
+      sort: sp.get("sort"),
       page,
-      sy,
-      sm,
-      sd,
-      ey,
-      em,
-      ed,
+      sy: sp.get("sy"),
+      sm: sp.get("sm"),
+      sd: sp.get("sd"),
+      ey: sp.get("ey"),
+      em: sp.get("em"),
+      ed: sp.get("ed"),
     });
 
-    /**
-     * NORMALIZE RESULT
-     * Support all cases:
-     * 1) { totalPage, data }
-     * 2) [totalPage, data]
-     * 3) { page, results }
-     * 4) {}
-     */
+    // normalize extractor result
     let totalPage = 0;
     let data = [];
 
     if (Array.isArray(result)) {
-      // old node-style: [totalPage, data]
       totalPage = result[0] ?? 0;
       data = result[1] ?? [];
     } else if (result && typeof result === "object") {
       totalPage =
         result.totalPage ??
         result.totalPages ??
-        result.pageCount ??
         0;
 
       data =
         result.data ??
         result.results ??
-        result.items ??
         [];
-    }
-
-    if (page > totalPage && totalPage !== 0) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: "Requested page exceeds total available pages",
-        }),
-        {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
     }
 
     return new Response(
       JSON.stringify({
         success: true,
+        keyword,
         page,
         totalPage,
         results: data,
@@ -110,7 +93,7 @@ export const search = async (request) => {
     return new Response(
       JSON.stringify({
         success: false,
-        message: error.message || "Search failed",
+        message: "Search failed",
       }),
       {
         status: 500,
