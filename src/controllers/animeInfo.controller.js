@@ -2,27 +2,53 @@ import extractAnimeInfo from "../extractors/animeInfo.extractor.js";
 import extractSeasons from "../extractors/seasons.extractor.js";
 // import { getCachedData, setCachedData } from "../helper/cache.helper.js";
 
-export const getAnimeInfo = async (req, res) => {
+export const getAnimeInfo = async (request) => {
   try {
-    const { id } = req.query;
+    const url = new URL(request.url);
+    const id = url.searchParams.get("id");
 
     if (!id) {
-      // ❗ res.json mat bhejo, wrapper handle karega
-      throw new Error("Anime id is required");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Anime id is required",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
-    // Parallel fetch (best practice)
+    // Parallel fetch
     const [seasons, data] = await Promise.all([
       extractSeasons(id),
       extractAnimeInfo(id),
     ]);
 
-    return {
-      data,
-      seasons,
-    };
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data,
+        seasons,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Error in getAnimeInfo:", error);
-    throw new Error("Failed to fetch anime info");
+
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: "Failed to fetch anime info",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 };
