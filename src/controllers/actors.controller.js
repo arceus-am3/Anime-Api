@@ -1,6 +1,6 @@
 import extractVoiceActor from "../extractors/actors.extractor.js";
 
-export default async function getVoiceActors(request, params) {
+export async function getVoiceActors(request, params) {
   try {
     const id = params.id;
 
