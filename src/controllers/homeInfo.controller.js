@@ -39,29 +39,32 @@ export const getHomeInfo = async (request) => {
       extractPage(1, "recently-added"),
     ]);
 
+    // ✅ DENO STYLE RESPONSE
     return new Response(
       JSON.stringify({
         success: true,
-        spotlights,
-        trending,
-        topTen,
-        today: { schedule },
-        topAiring: topAiring?.[0] || [],
-        mostPopular: mostPopular?.[0] || [],
-        mostFavorite: mostFavorite?.[0] || [],
-        latestCompleted: latestCompleted?.[0] || [],
-        latestEpisode: latestEpisode?.[0] || [],
-        topUpcoming: topUpcoming?.[0] || [],
-        recentlyAdded: recentlyAdded?.[0] || [],
-        genres,
+        results: {
+          spotlights,
+          trending,
+          topTen,
+          today: { schedule },
+          topAiring: topAiring?.[0] || [],
+          mostPopular: mostPopular?.[0] || [],
+          mostFavorite: mostFavorite?.[0] || [],
+          latestCompleted: latestCompleted?.[0] || [],
+          latestEpisode: latestEpisode?.[0] || [],
+          topUpcoming: topUpcoming?.[0] || [],
+          recentlyAdded: recentlyAdded?.[0] || [],
+          genres,
+        },
       }),
       {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }
     );
-  } catch (error) {
-    console.error("Error fetching home info:", error);
+  } catch (e) {
+    console.error("Error fetching home info:", e);
 
     return new Response(
       JSON.stringify({
