@@ -1,19 +1,46 @@
 import extractEpisodesList from "../extractors/episodeList.extractor.js";
-// import { getCachedData, setCachedData } from "../helper/cache.helper.js";
 
-export const getEpisodes = async (req) => {
+export const getEpisodes = async (request, params) => {
   try {
-    const { id } = req.params;
+    const id = params?.id;
 
     if (!id) {
-      throw new Error("Anime id is required");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Anime id is required",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
     const data = await extractEpisodesList(encodeURIComponent(id));
 
-    return data;
+    return new Response(
+      JSON.stringify({
+        success: true,
+        results: data,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Error fetching episodes:", error);
-    throw new Error("Failed to fetch episodes");
+
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: "Failed to fetch episodes",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 };
