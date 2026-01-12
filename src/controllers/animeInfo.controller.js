@@ -1,6 +1,5 @@
 import extractAnimeInfo from "../extractors/animeInfo.extractor.js";
 import extractSeasons from "../extractors/seasons.extractor.js";
-// import { getCachedData, setCachedData } from "../helper/cache.helper.js";
 
 export const getAnimeInfo = async (request) => {
   try {
@@ -9,26 +8,19 @@ export const getAnimeInfo = async (request) => {
 
     if (!id) {
       return new Response(
-        JSON.stringify({
-          success: false,
-          message: "Anime id is required",
-        }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
+        JSON.stringify({ error: "Anime id is required" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // Parallel fetch
     const [seasons, data] = await Promise.all([
       extractSeasons(id),
       extractAnimeInfo(id),
     ]);
 
+    // ❗ EXACT SAME AS DENO
     return new Response(
       JSON.stringify({
-        success: true,
         data,
         seasons,
       }),
@@ -37,18 +29,12 @@ export const getAnimeInfo = async (request) => {
         headers: { "Content-Type": "application/json" },
       }
     );
-  } catch (error) {
-    console.error("Error in getAnimeInfo:", error);
+  } catch (e) {
+    console.error("getAnimeInfo error:", e);
 
     return new Response(
-      JSON.stringify({
-        success: false,
-        message: "Failed to fetch anime info",
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
+      JSON.stringify({ error: "Failed to fetch anime info" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 };
