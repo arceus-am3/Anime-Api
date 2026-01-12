@@ -25,12 +25,12 @@ export const search = async (request) => {
 
     const page = parseInt(params.get("page") || "1", 10);
 
-    // 🔹 Convert foreign language keyword
     if (keyword) {
       keyword = await convertForeignLanguage(keyword);
     }
 
-    const [totalPage, data] = await extractSearchResults({
+    // ✅ OBJECT destructuring (NOT array)
+    const { totalPage, data } = await extractSearchResults({
       keyword,
       type,
       status,
