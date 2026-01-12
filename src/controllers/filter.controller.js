@@ -1,29 +1,29 @@
 import extractFilterResults from "../extractors/filter.extractor.js";
 
-export const filter = async (req) => {
+export const filter = async (request) => {
   try {
-    const {
-      type,
-      status,
-      rated,
-      score,
-      season,
-      language,
-      genres,
-      sort,
-      sy,
-      sm,
-      sd,
-      ey,
-      em,
-      ed,
-      keyword,
-      page = 1,
-    } = req.query;
+    const url = new URL(request.url);
+    const sp = url.searchParams;
 
-    const pageNum = parseInt(page, 10) || 1;
+    const type = sp.get("type");
+    const status = sp.get("status");
+    const rated = sp.get("rated");
+    const score = sp.get("score");
+    const season = sp.get("season");
+    const language = sp.get("language");
+    const genres = sp.get("genres");
+    const sort = sp.get("sort");
 
-    // Build params only if present
+    const sy = sp.get("sy");
+    const sm = sp.get("sm");
+    const sd = sp.get("sd");
+    const ey = sp.get("ey");
+    const em = sp.get("em");
+    const ed = sp.get("ed");
+
+    const keyword = sp.get("keyword");
+    const pageNum = parseInt(sp.get("page") || "1", 10);
+
     const params = {};
     if (type) params.type = type;
     if (status) params.status = status;
@@ -46,26 +46,43 @@ export const filter = async (req) => {
       await extractFilterResults(params);
 
     if (pageNum > totalPage) {
-      const error = new Error(
-        "Requested page exceeds total available pages."
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Requested page exceeds total available pages",
+        }),
+        {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        }
       );
-      error.status = 404;
-      throw error;
     }
 
-    return {
-      data,
-      totalPage,
-      currentPage,
-      hasNextPage,
-    };
+    return new Response(
+      JSON.stringify({
+        success: true,
+        totalPage,
+        currentPage,
+        hasNextPage,
+        results: data,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Error in filter controller:", error);
 
-    if (error.status === 404) {
-      throw error;
-    }
-
-    throw new Error("An error occurred while processing your request.");
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: "Failed to filter anime",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 };
