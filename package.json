@@ -1,5 +1,5 @@
 {
-  "name": "anime-api",
+  "name": "anime-api-main",
   "version": "1.0.0",
   "description": "Anime API running on Cloudflare Workers",
   "private": true,
