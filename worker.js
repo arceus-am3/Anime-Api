@@ -19,6 +19,7 @@ import { routeTypes } from "./src/routes/category.route.js";
 import { getWatchlist } from "./src/controllers/watchlist.controller.js";
 import getVoiceActors from "./src/controllers/actors.controller.js";
 
+
 import { getCharacter } from "./src/controllers/characters.controller.js";
 import * as filterController from "./src/controllers/filter.controller.js";
 import { getTopSearch } from "./src/controllers/topsearch.controller.js";
