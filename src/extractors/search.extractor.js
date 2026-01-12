@@ -1,4 +1,3 @@
-import axios from "axios";
 import * as cheerio from "cheerio";
 import { DEFAULT_HEADERS } from "../configs/header.config.js";
 import { v1_base_url } from "../utils/base_v1.js";
@@ -17,167 +16,79 @@ async function extractSearchResults(params = {}) {
   try {
     const normalizeParam = (param, mapping) => {
       if (!param) return undefined;
-
-      if (typeof param === "string") {
-        const isAlreadyId = Object.values(mapping).includes(param);
-        if (isAlreadyId) {
-          return param;
-        }
-
-        const key = param.trim().toUpperCase();
-        return mapping.hasOwnProperty(key) ? mapping[key] : undefined;
-      }
-      return param;
+      const key = String(param).trim().toUpperCase();
+      return mapping[key] ?? param;
     };
-
-    const typeParam = normalizeParam(params.type, FILTER_TYPES);
-    const statusParam = normalizeParam(params.status, FILTER_STATUS);
-    const ratedParam = normalizeParam(params.rated, FILTER_RATED);
-    const scoreParam = normalizeParam(params.score, FILTER_SCORE);
-    const seasonParam = normalizeParam(params.season, FILTER_SEASON);
-    const sortParam = normalizeParam(params.sort, FILTER_SORT);
-
-    let languageParam = params.language;
-    if (languageParam != null) {
-      languageParam = String(languageParam).trim().toUpperCase();
-      languageParam = FILTER_LANGUAGE_MAP[languageParam] ?? (Object.values(FILTER_LANGUAGE_MAP).includes(languageParam) ? languageParam : undefined);
-    }
-
-    let genresParam = params.genres;
-    if (typeof genresParam === "string") {
-      genresParam = genresParam
-        .split(",")
-        .map((genre) => GENRE_MAP[genre.trim().toUpperCase()] || genre.trim())
-        .join(",");
-    }
 
     const filteredParams = {
-      type: typeParam,
-      status: statusParam,
-      rated: ratedParam,
-      score: scoreParam,
-      season: seasonParam,
-      language: languageParam,
-      genres: genresParam,
-      sort: sortParam,
+      keyword: params.keyword,
+      type: normalizeParam(params.type, FILTER_TYPES),
+      status: normalizeParam(params.status, FILTER_STATUS),
+      rated: normalizeParam(params.rated, FILTER_RATED),
+      score: normalizeParam(params.score, FILTER_SCORE),
+      season: normalizeParam(params.season, FILTER_SEASON),
+      sort: normalizeParam(params.sort, FILTER_SORT),
+      language: FILTER_LANGUAGE_MAP[String(params.language || "").toUpperCase()],
+      genres: params.genres,
       page: params.page || 1,
-      sy: params.sy || undefined,
-      sm: params.sm || undefined,
-      sd: params.sd || undefined,
-      ey: params.ey || undefined,
-      em: params.em || undefined,
-      ed: params.ed || undefined,
-      keyword: params.keyword || undefined,
     };
 
-    Object.keys(filteredParams).forEach((key) => {
-      if (filteredParams[key] === undefined) {
-        delete filteredParams[key];
-      }
-    });
+    Object.keys(filteredParams).forEach(
+      (k) => filteredParams[k] == null && delete filteredParams[k]
+    );
 
-    const queryParams = new URLSearchParams(filteredParams).toString();
+    const query = new URLSearchParams(filteredParams).toString();
+    const url = `https://${v1_base_url}/search?${query}`;
 
-    const resp = await axios.get(`https://${v1_base_url}/search?${queryParams}`, {
+    const res = await fetch(url, {
       headers: {
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        "User-Agent": DEFAULT_HEADERS,
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+        Accept: "text/html",
+        "Accept-Language": "en-US,en;q=0.9",
+        Referer: "https://www.google.com/",
       },
     });
 
-    const $ = cheerio.load(resp.data);
-    const elements = "#main-content .film_list-wrap .flw-item";
+    if (!res.ok) {
+      throw new Error(`Fetch failed: ${res.status}`);
+    }
 
-    const totalPage =
-      Number(
-        $('.pre-pagination nav .pagination > .page-item a[title="Last"]')
-          ?.attr("href")
-          ?.split("=")
-          .pop() ??
-          $('.pre-pagination nav .pagination > .page-item a[title="Next"]')
-            ?.attr("href")
-            ?.split("=")
-            .pop() ??
-          $(".pre-pagination nav .pagination > .page-item.active a")
-            ?.text()
-            ?.trim()
-      ) || 1;
+    const html = await res.text();
+    const $ = cheerio.load(html);
 
-    const result = [];
-    $(elements).each((_, el) => {
-      const id =
-        $(el)
-          .find(".film-detail .film-name .dynamic-name")
-          ?.attr("href")
-          ?.slice(1)
-          .split("?ref=search")[0] || null;
-      result.push({
-        id: id,
-        data_id: $(el)
-          .find(".film-poster .film-poster-ahref").attr("data-id"),
-        title: $(el)
-          .find(".film-detail .film-name .dynamic-name")
-          ?.text()
-          ?.trim(),
-        japanese_title:
+    const items = [];
+    $("#main-content .film_list-wrap .flw-item").each((_, el) => {
+      items.push({
+        id:
           $(el)
-            .find(".film-detail .film-name .dynamic-name")
-            ?.attr("data-jname")
-            ?.trim() || null,
-        poster:
-          $(el)
-            .find(".film-poster .film-poster-img")
-            ?.attr("data-src")
-            ?.trim() || null,
-        duration:
-          $(el)
-            .find(".film-detail .fd-infor .fdi-item.fdi-duration")
-            ?.text()
-            ?.trim(),
-        tvInfo: {
-          showType:
-            $(el)
-              .find(".film-detail .fd-infor .fdi-item:nth-of-type(1)")
-              .text()
-              .trim() || "Unknown",
-          rating: $(el).find(".film-poster .tick-rate")?.text()?.trim() || null,
-          sub:
-            Number(
-              $(el)
-                .find(".film-poster .tick-sub")
-                ?.text()
-                ?.trim()
-                .split(" ")
-                .pop()
-            ) || null,
-          dub:
-            Number(
-              $(el)
-                .find(".film-poster .tick-dub")
-                ?.text()
-                ?.trim()
-                .split(" ")
-                .pop()
-            ) || null,
-          eps:
-            Number(
-              $(el)
-                .find(".film-poster .tick-eps")
-                ?.text()
-                ?.trim()
-                .split(" ")
-                .pop()
-            ) || null,
-        },
+            .find(".film-name .dynamic-name")
+            .attr("href")
+            ?.slice(1)
+            ?.split("?")[0] || null,
+        title: $(el).find(".dynamic-name").text().trim(),
+        poster: $(el).find(".film-poster-img").attr("data-src") || null,
       });
     });
 
-    return [parseInt(totalPage, 10), result.length > 0 ? result : []];
-  } catch (e) {
-    console.error(e);
-    return e;
+    const totalPage =
+      Number(
+        $('.pagination a[title="Last"]')
+          ?.attr("href")
+          ?.split("=")
+          .pop()
+      ) || 1;
+
+    return {
+      totalPage,
+      data: items,
+    };
+  } catch (err) {
+    console.error("Search extractor error:", err);
+    return {
+      totalPage: 0,
+      data: [],
+    };
   }
 }
 
