@@ -15,11 +15,13 @@ import * as producerController from "../controllers/producer.controller.js";
 import * as characterListController from "../controllers/voiceactor.controller.js";
 import * as nextEpisodeScheduleController from "../controllers/nextEpisodeSchedule.controller.js";
 import { routeTypes } from "./category.route.js";
+
 import { getWatchlist } from "../controllers/watchlist.controller.js";
-import getVoiceActors from "../controllers/actors.controller.js";
-import getCharacter from "../controllers/characters.controller.js";
+import { getVoiceActors } from "../controllers/actors.controller.js";
+import { getCharacter } from "../controllers/characters.controller.js";
 import * as filterController from "../controllers/filter.controller.js";
-import getTopSearch from "../controllers/topsearch.controller.js";
+import { getTopSearch } from "../controllers/topsearch.controller.js";
+
 export const createApiRoutes = (app, jsonResponse, jsonError) => {
   const createRoute = (path, controllerMethod) => {
     app.get(path, async (req, res) => {
