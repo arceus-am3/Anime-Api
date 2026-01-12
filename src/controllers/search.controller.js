@@ -4,33 +4,34 @@ import convertForeignLanguage from "../helper/foreignInput.helper.js";
 export const search = async (request) => {
   try {
     const url = new URL(request.url);
-    const params = url.searchParams;
+    const sp = url.searchParams;
 
-    let keyword = params.get("q") || params.get("keyword");
-    const type = params.get("type");
-    const status = params.get("status");
-    const rated = params.get("rated");
-    const score = params.get("score");
-    const season = params.get("season");
-    const language = params.get("language");
-    const genres = params.get("genres");
-    const sort = params.get("sort");
+    let keyword = sp.get("q") || sp.get("keyword");
+    const type = sp.get("type");
+    const status = sp.get("status");
+    const rated = sp.get("rated");
+    const score = sp.get("score");
+    const season = sp.get("season");
+    const language = sp.get("language");
+    const genres = sp.get("genres");
+    const sort = sp.get("sort");
 
-    const sy = params.get("sy");
-    const sm = params.get("sm");
-    const sd = params.get("sd");
-    const ey = params.get("ey");
-    const em = params.get("em");
-    const ed = params.get("ed");
+    const sy = sp.get("sy");
+    const sm = sp.get("sm");
+    const sd = sp.get("sd");
+    const ey = sp.get("ey");
+    const em = sp.get("em");
+    const ed = sp.get("ed");
 
-    const page = parseInt(params.get("page") || "1", 10);
+    const page = parseInt(sp.get("page") || "1", 10);
 
+    // foreign language safe convert
     if (keyword) {
       keyword = await convertForeignLanguage(keyword);
     }
 
-    // ✅ OBJECT destructuring (NOT array)
-    const { totalPage, data } = await extractSearchResults({
+    // 🔹 CALL EXTRACTOR (DON'T ASSUME SHAPE)
+    const result = await extractSearchResults({
       keyword,
       type,
       status,
@@ -49,13 +50,45 @@ export const search = async (request) => {
       ed,
     });
 
-    if (page > totalPage) {
+    /**
+     * NORMALIZE RESULT
+     * Support all cases:
+     * 1) { totalPage, data }
+     * 2) [totalPage, data]
+     * 3) { page, results }
+     * 4) {}
+     */
+    let totalPage = 0;
+    let data = [];
+
+    if (Array.isArray(result)) {
+      // old node-style: [totalPage, data]
+      totalPage = result[0] ?? 0;
+      data = result[1] ?? [];
+    } else if (result && typeof result === "object") {
+      totalPage =
+        result.totalPage ??
+        result.totalPages ??
+        result.pageCount ??
+        0;
+
+      data =
+        result.data ??
+        result.results ??
+        result.items ??
+        [];
+    }
+
+    if (page > totalPage && totalPage !== 0) {
       return new Response(
         JSON.stringify({
           success: false,
           message: "Requested page exceeds total available pages",
         }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
+        {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        }
       );
     }
 
