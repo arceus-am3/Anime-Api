@@ -1,4 +1,4 @@
-import { createApiRoutes } from "./src/routes/apiRoutes.worker.js";
+import { createApiRoutes } from "./src/routes/apiRoutes.js";
 
 export default {
   async fetch(request, env, ctx) {
